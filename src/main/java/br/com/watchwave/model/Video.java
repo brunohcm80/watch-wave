@@ -1,6 +1,6 @@
 package br.com.watchwave.model;
 
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -14,6 +14,8 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Data
 public class Video {
     @Id
     private UUID id;
@@ -26,5 +28,6 @@ public class Video {
     @NotNull
     private LocalDate dataPublicacao;
     @NotNull
+    @ManyToMany
     private List<Categoria> categorias;
 }

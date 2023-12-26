@@ -84,7 +84,7 @@ public class VideoRepositoryTest {
         when(videoRepository.findByTitulo(any(String.class))).thenReturn(videos);
 
         // Act
-        var videoPesquisado = videoRepository.findByTitulo("Jigsaw");
+        var videoPesquisado = videoRepository.findByTitulo("Duna: Parte 2");
 
         // Assert
         assertThat(videoPesquisado)
@@ -133,10 +133,10 @@ public class VideoRepositoryTest {
                 .nome("Aventura")
                 .build();
 
-        when(videoRepository.findByCategoria(any(Categoria.class))).thenReturn(videos);
+        when(videoRepository.findByCategorias(any(Categoria.class))).thenReturn(videos);
 
         // Act
-        var videosListados = videoRepository.findByCategoria(categoria);
+        var videosListados = videoRepository.findByCategorias(categoria);
 
         // Assert
         assertThat(videosListados)
@@ -149,7 +149,7 @@ public class VideoRepositoryTest {
         assertThat(videosListados.get(1).getId()).isEqualTo(videos.get(1).getId());
         assertThat(videosListados.get(1).getDataPublicacao()).isEqualTo(videos.get(1).getDataPublicacao());
 
-        verify(videoRepository, times(1)).findByCategoria(any(Categoria.class));
+        verify(videoRepository, times(1)).findByCategorias(any(Categoria.class));
 
     }
 
@@ -171,7 +171,7 @@ public class VideoRepositoryTest {
         return Video.builder()
                 .id(UUID.randomUUID())
                 .titulo("Wonka")
-                .descricao("A Fantastica Fabrica de Chocolate")
+                .descricao("A história se concentra em um jovem Willy Wonka e como ele conheceu os Oompa-Loompas.")
                 .url("https://www.youtube.com/watch?v=5a-qYjXNOtw")
                 .dataPublicacao(LocalDate.parse("2023-12-07"))
                 .build();
@@ -181,17 +181,17 @@ public class VideoRepositoryTest {
         var primeiroVideo =
                     Video.builder()
                             .id(UUID.randomUUID())
-                            .titulo("Jigsaw")
-                            .descricao("Jogos Mortais: Jigsaw")
-                            .url("https://www.youtube.com/watch?v=vPP6aIw1vgY")
-                            .dataPublicacao(LocalDate.parse("2017-11-30"))
+                            .titulo("Guardioes da Galaxia Volume 3")
+                            .descricao("Peter Quill deve reunir sua equipe para defender o universo e proteger um dos seus. Se a missão não for totalmente bem-sucedida, isso pode levar ao fim dos Guardiões.")
+                            .url("https://www.youtube.com/watch?v=d1yNc9skssk")
+                            .dataPublicacao(LocalDate.parse("2023-05-04"))
                             .build();
 
         var segundoVideo =
                 Video.builder()
                         .id(UUID.randomUUID())
-                        .titulo("Homem-Aranha no Aranhaverso")
-                        .descricao("Homem-Aranha: Através do Aranhaverso")
+                        .titulo("Homem-Aranha: Através do Aranhaverso")
+                        .descricao("Depois de se reunir com Gwen Stacy, Homem-Aranha é jogado no multiverso, onde ele encontra uma equipe encarregada de proteger sua própria existência.")
                         .url("https://www.youtube.com/watch?v=LZBlXkDvhh4")
                         .dataPublicacao(LocalDate.parse("2023-04-04"))
                         .build();
@@ -199,8 +199,8 @@ public class VideoRepositoryTest {
         var terceiroVideo =
                 Video.builder()
                         .id(UUID.randomUUID())
-                        .titulo("Duna 2")
-                        .descricao("Duna: Parte 2")
+                        .titulo("Duna: Parte 2")
+                        .descricao("Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família. Enfrentando uma escolha entre o amor de sua vida e o destino do universo, ele deve evitar um futuro terrível que só ele pode prever.")
                         .url("https://www.youtube.com/watch?v=ncwsW3qxQlo")
                         .dataPublicacao(LocalDate.parse("2024-03-14"))
                         .build();
