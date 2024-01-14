@@ -6,7 +6,8 @@ VALUES
     ('85b34370-80b9-4b49-99be-204510a20718', 'Terror'),
     ('2c7b6cae-034b-4da4-adb2-28f8899e900d', 'Acao'),
     ('d7cbf058-0203-42b1-8542-b432e1c3a5d7', 'Suspense'),
-    ('ea15668e-006a-4c0b-b25d-df48c5652e21', 'Ficcao Cientifica');
+    ('ea15668e-006a-4c0b-b25d-df48c5652e21', 'Ficcao Cientifica'),
+    ('947e5e8b-9528-4628-ac6d-eb5c1c4c88d8', 'Fantasia');
 
 INSERT INTO video
     (ID, TITULO, DESCRICAO, URL, DATA_PUBLICACAO)

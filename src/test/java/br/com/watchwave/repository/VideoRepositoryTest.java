@@ -29,7 +29,7 @@ public class VideoRepositoryTest {
     }
 
     @AfterEach
-    void TearDown() throws Exception{
+    void tearDown() throws Exception{
         openMocks.close();
     }
 

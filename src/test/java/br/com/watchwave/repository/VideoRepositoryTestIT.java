@@ -15,10 +15,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @AutoConfigureTestDatabase
@@ -131,6 +127,10 @@ public class VideoRepositoryTestIT {
 
         // Act
         videoRepository.deleteById(videoExclusao.getId());
+
+        // Assert
+        var videoPesquisado = videoRepository.findById(videoExclusao.getId());
+        assertThat(videoPesquisado).isEmpty();
     }
 
     private Video gerarVideo() {
