@@ -9,14 +9,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,12 +31,15 @@ public class VideoServiceTest {
     @Mock
     private VideoRepository videoRepository;
 
+    @Mock
+    private CategoriaService categoriaService;
+
     AutoCloseable openMocks;
 
     @BeforeEach
     void setup(){
         openMocks = MockitoAnnotations.openMocks(this);
-        videoService = new VideoServiceImpl(videoRepository);
+        videoService = new VideoServiceImpl(videoRepository, categoriaService);
     }
 
     @AfterEach
@@ -48,8 +51,7 @@ public class VideoServiceTest {
     void devePermitirCriarVideo (){
         // Arrange
         var video = gerarVideo();
-        when(videoRepository.save(any(Video.class)))
-                .thenAnswer(i -> (i.getArgument(0)));
+        when(videoRepository.save(any(Video.class))).thenReturn(Mono.just(video));
 
         // Act
         var videoCadastrado = videoService.cadastrarVideo(video);
@@ -57,10 +59,10 @@ public class VideoServiceTest {
         // Assert
         assertThat(videoCadastrado)
                 .isNotNull()
-                .isInstanceOf(Video.class);
+                .isInstanceOf(Mono.class);
 
-        assertThat(videoCadastrado.getId()).isEqualTo(video.getId());
-        assertThat(videoCadastrado.getCategorias().get(0).getNome())
+        assertThat(videoCadastrado.block().getId()).isEqualTo(video.getId());
+        assertThat(videoCadastrado.block().getCategorias().get(0).getNome())
                 .isEqualTo(video.getCategorias().get(0).getNome());
     }
 
@@ -70,19 +72,19 @@ public class VideoServiceTest {
         var video = gerarVideo();
         video.setId(UUID.fromString("11d171cd-8bdf-4e5c-bbe1-2d0e112cc943"));
 
-        when(videoRepository.findById(any(UUID.class))).thenReturn(Optional.of(video));
-        when(videoRepository.save(any(Video.class))).thenAnswer(i -> (i.getArgument(0)));
+        when(videoRepository.findById(any(UUID.class))).thenReturn(Mono.just(video));
+        when(videoRepository.save(any(Video.class))).thenReturn(Mono.just(video));
 
         // Act
-        var videoAtualizado = videoService.atualizarVideo(video);
+        var videoAtualizado = videoService.atualizarVideo(video.getId(), video);
 
         // Assert
-        assertThat(video.getId()).isEqualTo(videoAtualizado.getId());
-        assertThat(video.getTitulo()).isEqualTo(videoAtualizado.getTitulo());
+        assertThat(video.getId()).isEqualTo(videoAtualizado.block().getId());
+        assertThat(video.getTitulo()).isEqualTo(videoAtualizado.block().getTitulo());
         assertThat(video.getCategorias().get(0).getId())
-                .isEqualTo(videoAtualizado.getCategorias().get(0).getId());
+                .isEqualTo(videoAtualizado.block().getCategorias().get(0).getId());
         assertThat(video.getCategorias().get(0).getNome())
-                .isEqualTo(videoAtualizado.getCategorias().get(0).getNome());
+                .isEqualTo(videoAtualizado.block().getCategorias().get(0).getNome());
 
         verify(videoRepository, times(1)).findById(any(UUID.class));
         verify(videoRepository, times(1)).save(any(Video.class));
@@ -95,16 +97,15 @@ public class VideoServiceTest {
         var video = gerarVideo();
         video.setId(id);
 
-        when(videoRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+        when(videoRepository.findById(any(UUID.class))).thenReturn(Mono.empty());
 
         // Act
         // Assert
-        assertThatThrownBy(() -> videoService.atualizarVideo(video))
-                .isInstanceOf(VideoInvalidoException.class)
-                .hasMessage("Video nao localizado");
-
+        StepVerifier.create(videoService.atualizarVideo(id, video))
+                .consumeErrorWith(t -> assertThat(t)
+                        .isInstanceOf(VideoInvalidoException.class)
+                        .hasMessage("Video não localizado"));
         verify(videoRepository, times(1)).findById(any(UUID.class));
-
     }
 
     @Test
@@ -122,7 +123,7 @@ public class VideoServiceTest {
         terceiroVideoLista.setId(UUID.fromString("6b9364e8-8131-44cc-adfe-b2a1c6775602"));
         terceiroVideoLista.setDataPublicacao(LocalDate.parse("2023-12-01"));
 
-        var listaOrdenadaVideos = Arrays.asList(primeiroVideoLista, segundoVideoLista, terceiroVideoLista);
+        var listaOrdenadaVideos = Flux.just(primeiroVideoLista, segundoVideoLista, terceiroVideoLista);
 
         when(videoRepository.findAllByOrderByDataPublicacaoAsc()).thenReturn(listaOrdenadaVideos);
 
@@ -130,14 +131,13 @@ public class VideoServiceTest {
         var listaVideos = videoService.listarTodosVideosOrdenadosPorDataPublicacao(Pageable.unpaged());
 
         // Assert
-        assertThat(listaVideos.getSize()).isEqualTo(listaOrdenadaVideos.size());
-        assertThat(listaVideos.toList().get(0).getId())
-                .isEqualTo(listaOrdenadaVideos.get(0).getId());
-        assertThat(listaVideos.toList().get(0).getDataPublicacao())
-                .isEqualTo(listaOrdenadaVideos.get(0).getDataPublicacao());
+        assertThat(listaVideos.block().get().toList().get(0).getId())
+                .isEqualTo(listaOrdenadaVideos.toStream().toList().get(0).getId());
+        assertThat(listaVideos.block().get().toList().get(0).getDataPublicacao())
+                .isEqualTo(listaOrdenadaVideos.toStream().toList().get(0).getDataPublicacao());
 
-        assertThat(listaVideos).isInstanceOf(PageImpl.class);
-        verify(videoRepository, times(1)).findAllByOrderByDataPublicacaoAsc();
+        assertThat(listaVideos).isInstanceOf(Mono.class);
+        verify(videoRepository, times(2)).findAllByOrderByDataPublicacaoAsc();
     }
 
     @Test
@@ -145,8 +145,7 @@ public class VideoServiceTest {
         // Arrange
         var video = gerarVideo();
         video.setId(UUID.fromString("2d6cd3fe-a01e-41c0-8b02-6a502f1cad96"));
-
-        var listaVideo = Arrays.asList(video);
+        var listaVideo = Flux.just(video);
 
         when(videoRepository.findByTitulo(any(String.class))).thenReturn(listaVideo);
 
@@ -155,11 +154,11 @@ public class VideoServiceTest {
                 .buscarVideosPorTitulo("Aquaman 2: O Reino Perdido", Pageable.unpaged());
 
         // Assert
-        assertThat(videoPesquisado).isInstanceOf(Page.class);
-        assertThat(videoPesquisado.toList().get(0).getTitulo()).isEqualTo(video.getTitulo());
-        assertThat(videoPesquisado.toList().get(0).getId()).isEqualTo(video.getId());
+        assertThat(videoPesquisado).isInstanceOf(Mono.class);
+        assertThat(videoPesquisado.block().stream().toList().get(0).getTitulo()).isEqualTo(video.getTitulo());
+        assertThat(videoPesquisado.block().stream().toList().get(0).getId()).isEqualTo(video.getId());
 
-        verify(videoRepository, times(1)).findByTitulo(any(String.class));
+        verify(videoRepository, times(2)).findByTitulo(any(String.class));
     }
 
     @Test
@@ -173,7 +172,7 @@ public class VideoServiceTest {
         segundoVideo.setDataPublicacao(LocalDate.parse("2023-09-02"));
         segundoVideo.setId(UUID.fromString("9580a540-f512-45c4-8b70-4f86b3035987"));
 
-        var listaVideos = Arrays.asList(primeiroVideo, segundoVideo);
+        var listaVideos = Flux.just(primeiroVideo, segundoVideo);
 
         when(videoRepository.findByDataPublicacao(any(LocalDate.class))).thenReturn(listaVideos);
 
@@ -182,15 +181,17 @@ public class VideoServiceTest {
                 .parse("2023-09-02"), Pageable.unpaged());
 
         // Assert
-        assertThat(videosPesquisados.toList().get(0).getId()).isEqualTo(listaVideos.get(0).getId());
-        assertThat(videosPesquisados.toList().get(0).getDataPublicacao())
-                .isEqualTo(listaVideos.get(0).getDataPublicacao());
+        assertThat(videosPesquisados.block().toList().get(0).getId())
+                .isEqualTo(listaVideos.toStream().toList().get(0).getId());
+        assertThat(videosPesquisados.block().stream().toList().get(0).getDataPublicacao())
+                .isEqualTo(listaVideos.toStream().toList().get(0).getDataPublicacao());
 
-        assertThat(videosPesquisados.toList().get(1).getId()).isEqualTo(listaVideos.get(1).getId());
-        assertThat(videosPesquisados.toList().get(1).getDataPublicacao())
-                .isEqualTo(listaVideos.get(1).getDataPublicacao());
+        assertThat(videosPesquisados.block().stream().toList().get(1).getId())
+                .isEqualTo(listaVideos.toStream().toList().get(1).getId());
+        assertThat(videosPesquisados.block().stream().toList().get(1).getDataPublicacao())
+                .isEqualTo(listaVideos.toStream().toList().get(1).getDataPublicacao());
 
-        verify(videoRepository, times(1)).findByDataPublicacao(any(LocalDate.class));
+        verify(videoRepository, times(2)).findByDataPublicacao(any(LocalDate.class));
     }
 
     @Test
@@ -203,24 +204,28 @@ public class VideoServiceTest {
         var segundoVideo = gerarVideo();
         segundoVideo.setId(UUID.fromString("5c5c17e9-923c-4c95-a0a7-0d2dae73c913"));
 
-        var listaVideos = Arrays.asList(primeiroVideo, segundoVideo);
+        var listaVideos = Flux.just(primeiroVideo, segundoVideo);
+        var categoria = Mono.just(gerarCategorias().get(0));
 
         when(videoRepository.findByCategorias(any(Categoria.class))).thenReturn(listaVideos);
+        when(categoriaService.buscarCategoria(any(UUID.class))).thenReturn(categoria);
 
         // Act
         var videosPesquisados = videoService.buscarVideosPorCategoria(
-                gerarCategorias().get(0), Pageable.unpaged());
+                gerarCategorias().get(0).getId(), Pageable.unpaged());
 
         // Assert
-        assertThat(videosPesquisados.toList().get(0).getId()).isEqualTo(listaVideos.get(0).getId());
-        assertThat(videosPesquisados.toList().get(0).getCategorias().get(0))
-                .isEqualTo(listaVideos.get(0).getCategorias().get(0));
+        assertThat(videosPesquisados.block().stream().toList().get(0).getId())
+                .isEqualTo(listaVideos.toStream().toList().get(0).getId());
+        assertThat(videosPesquisados.block().stream().toList().get(0).getCategorias().get(0))
+                .isEqualTo(listaVideos.toStream().toList().get(0).getCategorias().get(0));
 
-        assertThat(videosPesquisados.toList().get(1).getId()).isEqualTo(listaVideos.get(1).getId());
-        assertThat(videosPesquisados.toList().get(1).getCategorias().get(0))
-                .isEqualTo(listaVideos.get(1).getCategorias().get(0));
+        assertThat(videosPesquisados.block().stream().toList().get(1).getId())
+                .isEqualTo(listaVideos.toStream().toList().get(1).getId());
+        assertThat(videosPesquisados.block().stream().toList().get(1).getCategorias().get(0))
+                .isEqualTo(listaVideos.toStream().toList().get(1).getCategorias().get(0));
 
-        verify(videoRepository, times(1)).findByCategorias(any(Categoria.class));
+        verify(videoRepository, times(2)).findByCategorias(any(Categoria.class));
     }
 
     @Test
@@ -229,13 +234,14 @@ public class VideoServiceTest {
         var video = gerarVideo();
         video.setId(UUID.fromString("8d759d21-513f-4790-8d54-21977e5d076e"));
 
-        when(videoRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+        when(videoRepository.findById(any(UUID.class))).thenReturn(Mono.empty());
 
         // Act
         // Assert
-        assertThatThrownBy(() -> videoService.excluirVideo(video))
-                .isInstanceOf(VideoInvalidoException.class)
-                .hasMessage("Video nao localizado");
+        StepVerifier.create(videoService.excluirVideo(video.getId()))
+                .consumeErrorWith(t -> assertThat(t)
+                        .isInstanceOf(VideoInvalidoException.class)
+                        .hasMessage("Video não localizado"));
         verify(videoRepository, times(1)).findById(any(UUID.class));
 
     }
@@ -246,14 +252,12 @@ public class VideoServiceTest {
         var video = gerarVideo();
         video.setId(UUID.fromString("c45a51f0-7e35-4e47-8822-3476cf574ad1"));
 
-        when(videoRepository.findById(any(UUID.class))).thenReturn(Optional.of(video));
-        doNothing().when(videoRepository).deleteById(any(UUID.class));
+        when(videoRepository.findById(any(UUID.class))).thenReturn(Mono.just(video));
+        when(videoRepository.deleteById(any(UUID.class))).thenReturn(Mono.empty());
 
-        // Act
-        var resultado = videoService.excluirVideo(video);
+        videoService.excluirVideo(video.getId());
 
         // Assert
-        assertThat(resultado).isTrue();
         verify(videoRepository, times(1)).deleteById(any(UUID.class));
     }
 

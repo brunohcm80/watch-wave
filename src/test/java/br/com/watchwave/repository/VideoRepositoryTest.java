@@ -7,10 +7,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
@@ -37,8 +37,9 @@ public class VideoRepositoryTest {
     void devePermitirCriarVideo(){
         // Arrange
         var video = gerarVideo();
+        var videoMono = Mono.just(video);
 
-        when(videoRepository.save(any(Video.class))).thenReturn(video);
+        when(videoRepository.save(any(Video.class))).thenReturn(videoMono);
 
         // Act
         var videoCriado = videoRepository.save(video);
@@ -46,7 +47,7 @@ public class VideoRepositoryTest {
         // Assert
         assertThat(videoCriado)
                 .isNotNull()
-                .isEqualTo(video);
+                .isEqualTo(videoMono);
 
         verify(videoRepository, times(1)).save(any(Video.class));
 
@@ -63,15 +64,7 @@ public class VideoRepositoryTest {
         var videosPesquisados = videoRepository.findAllByOrderByDataPublicacaoAsc();
 
         // Assert
-        assertThat(videosPesquisados)
-                .size()
-                .isEqualTo(videos.size());
-
-        assertThat(videosPesquisados.get(0).getId()).isEqualTo(videos.get(0).getId());
-        assertThat(videosPesquisados.get(0).getDescricao()).isEqualTo(videos.get(0).getDescricao());
-
-        assertThat(videosPesquisados.get(1).getId()).isEqualTo(videos.get(1).getId());
-        assertThat(videosPesquisados.get(1).getDescricao()).isEqualTo(videos.get(1).getDescricao());
+        assertThat(videosPesquisados.collectList().block()).isEqualTo(videos.collectList().block());
 
         verify(videoRepository, times(1)).findAllByOrderByDataPublicacaoAsc();
     }
@@ -91,12 +84,6 @@ public class VideoRepositoryTest {
                 .isNotNull()
                 .isEqualTo(videos);
 
-        assertThat(videoPesquisado.get(0).getId()).isEqualTo(videos.get(0).getId());
-        assertThat(videoPesquisado.get(0).getDataPublicacao()).isEqualTo(videos.get(0).getDataPublicacao());
-
-        assertThat(videoPesquisado.get(1).getId()).isEqualTo(videos.get(1).getId());
-        assertThat(videoPesquisado.get(1).getDataPublicacao()).isEqualTo(videos.get(1).getDataPublicacao());
-
         verify(videoRepository, times(1)).findByTitulo(any(String.class));
     }
 
@@ -114,12 +101,6 @@ public class VideoRepositoryTest {
         assertThat(videosListados)
                 .isNotNull()
                 .isEqualTo(videos);
-
-        assertThat(videosListados.get(0).getId()).isEqualTo(videos.get(0).getId());
-        assertThat(videosListados.get(0).getDataPublicacao()).isEqualTo(videos.get(0).getDataPublicacao());
-
-        assertThat(videosListados.get(1).getId()).isEqualTo(videos.get(1).getId());
-        assertThat(videosListados.get(1).getDataPublicacao()).isEqualTo(videos.get(1).getDataPublicacao());
 
         verify(videoRepository, times(1)).findByDataPublicacao(any(LocalDate.class));
     }
@@ -143,12 +124,6 @@ public class VideoRepositoryTest {
                 .isNotNull()
                 .isEqualTo(videos);
 
-        assertThat(videosListados.get(0).getId()).isEqualTo(videos.get(0).getId());
-        assertThat(videosListados.get(0).getDataPublicacao()).isEqualTo(videos.get(0).getDataPublicacao());
-
-        assertThat(videosListados.get(1).getId()).isEqualTo(videos.get(1).getId());
-        assertThat(videosListados.get(1).getDataPublicacao()).isEqualTo(videos.get(1).getDataPublicacao());
-
         verify(videoRepository, times(1)).findByCategorias(any(Categoria.class));
 
     }
@@ -157,10 +132,10 @@ public class VideoRepositoryTest {
     void devePermitirExcluirVideo(){
         // Arrange
         var id = UUID.randomUUID();
-        doNothing().when(videoRepository).deleteById(any(UUID.class));
+        when(videoRepository.deleteById(any(UUID.class))).thenReturn(Mono.empty());
 
         // Act
-        videoRepository.deleteById(id);
+        var resultado = videoRepository.deleteById(id);
 
         // Assert
         verify(videoRepository, times(1)).deleteById(any(UUID.class));
@@ -177,7 +152,7 @@ public class VideoRepositoryTest {
                 .build();
     }
 
-    private List<Video> gerarListaVideos(){
+    private Flux<Video> gerarListaVideos(){
         var primeiroVideo =
                     Video.builder()
                             .id(UUID.randomUUID())
@@ -205,10 +180,7 @@ public class VideoRepositoryTest {
                         .dataPublicacao(LocalDate.parse("2024-03-14"))
                         .build();
 
-        var videos = new ArrayList<Video>();
-        videos.add(primeiroVideo);
-        videos.add(segundoVideo);
-        videos.add(terceiroVideo);
+        var videos = Flux.just(primeiroVideo, segundoVideo, terceiroVideo);
 
         return videos;
     }

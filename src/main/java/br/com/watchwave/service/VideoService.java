@@ -4,22 +4,25 @@ import br.com.watchwave.model.Categoria;
 import br.com.watchwave.model.Video;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 public interface VideoService {
 
-    public Video cadastrarVideo (Video video);
+    public Mono<Video> cadastrarVideo (Video video);
 
-    public Video atualizarVideo (Video video);
+    public Mono<Video> atualizarVideo (UUID id, Video video);
 
-    public Page<Video> buscarVideosPorTitulo (String titulo, Pageable paginacao);
+    public Mono<Page<Video>> buscarVideosPorTitulo (String titulo, Pageable paginacao);
 
-    public Page<Video> buscarVideosPorDataDaPublicacao (LocalDate dataPublicacao, Pageable paginacao);
+    public Mono<Page<Video>> buscarVideosPorDataDaPublicacao (LocalDate dataPublicacao, Pageable paginacao);
 
-    public Page<Video> buscarVideosPorCategoria (Categoria categoria, Pageable paginacao);
+    public Mono<Page<Video>> buscarVideosPorCategoria (UUID idCategoria, Pageable paginacao);
 
-    public Page<Video> listarTodosVideosOrdenadosPorDataPublicacao (Pageable paginacao);
+    public Mono<Page<Video>> listarTodosVideosOrdenadosPorDataPublicacao (Pageable paginacao);
 
-    public boolean excluirVideo (Video video);
+    public Mono<Boolean> excluirVideo (UUID id);
 }

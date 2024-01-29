@@ -2,18 +2,17 @@ package br.com.watchwave.repository;
 
 import br.com.watchwave.model.Categoria;
 import br.com.watchwave.model.Video;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
+import reactor.core.publisher.Flux;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
-@Repository
-public interface VideoRepository extends JpaRepository<Video, UUID> {
-    List<Video> findByTitulo (String titulo);
-    List<Video> findByDataPublicacao (LocalDate dataPublicacao);
-    List<Video> findByCategorias(Categoria categoria);
-    List<Video> findAllByOrderByDataPublicacaoAsc();
+public interface VideoRepository extends ReactiveMongoRepository<Video, UUID> {
+    Flux<Video> findByTitulo (String titulo);
+    Flux<Video> findByDataPublicacao (LocalDate dataPublicacao);
+    Flux<Video> findByCategorias(Categoria categoria);
+    Flux<Video> findAllByOrderByDataPublicacaoAsc();
 }
+
 
